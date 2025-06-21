@@ -24,7 +24,7 @@ from handlers import (
     antispam_handler
 )
 
-BOT_TOKEN = "8176347490:AAEkJexaY4P38sLafTcDkJFQPD9xUP3lHCk"
+BOT_TOKEN = "7802952864:AAHgMC_FQgvZfMsjiboaOlOtkoYDcfWdzto"
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 
 # Flask for web hosting

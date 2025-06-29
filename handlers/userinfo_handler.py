@@ -3,38 +3,71 @@ from telebot.types import Message, InputFile
 from io import BytesIO
 
 def register(bot):
-    @bot.message_handler(commands=["info"])
-    def handle_userinfo(message: Message):
+    def fetch_info(bot, message: Message, target_type: str):
         identifier = None
-
         args = message.text.split(maxsplit=1)
 
-        # Case 1: /info @username or /info user_id
-        if len(args) > 1:
-            identifier = args[1].strip()
-            # যদি ইউজারনেম না হয় এবং ডেটা ডিজিট না হয়, @ যুক্ত করো
-            if not identifier.startswith("@") and not identifier.isdigit():
-                identifier = "@" + identifier
-
-        # Case 2: Reply করলে রিপ্লাই করা ইউজারের ইনফো
-        elif message.reply_to_message:
-            user = message.reply_to_message.from_user or message.reply_to_message.forward_from
-            if user:
-                if user.username:
-                    identifier = f"@{user.username}"
+        # USER / BOT
+        if target_type in ["user", "bot"]:
+            if len(args) > 1:
+                identifier = args[1].strip()
+                if not identifier.startswith("@") and not identifier.isdigit():
+                    identifier = "@" + identifier
+            elif message.reply_to_message:
+                user = message.reply_to_message.from_user or message.reply_to_message.forward_from
+                if user:
+                    identifier = f"@{user.username}" if user.username else str(user.id)
                 else:
-                    identifier = str(user.id)
+                    bot.reply_to(message, "❌ রিপ্লাই করা মেসেজ থেকে ইউজার পাওয়া যায়নি।")
+                    return
             else:
-                bot.reply_to(message, "❌ রিপ্লাই করা মেসেজ থেকে ইউজার পাওয়া যায়নি।")
+                identifier = f"@{message.from_user.username}" if message.from_user.username else str(message.from_user.id)
+
+        # GROUP
+        elif target_type == "group":
+            if message.chat.type in ["group", "supergroup"]:
+                if len(args) > 1:
+                    identifier = args[1].strip()
+                    if not identifier.startswith("@") and not identifier.lstrip("-").isdigit():
+                        identifier = "@" + identifier
+                else:
+                    if message.chat.username:
+                        identifier = f"@{message.chat.username}"
+                    else:
+                        # 🔁 Local fallback (no username)
+                        local_msg = f"""✘《 Group Information ↯ 》
+↯ Title: {message.chat.title}
+↯ Chat ID: {message.chat.id}
+↯ Type: {message.chat.type.title()}
+↯ Username: Not set
+↯ Description: Not available
+
+↯ API Owner: @itz_mahir404 follow: https://t.me/bro_bin_lagbe
+"""
+                        bot.send_message(
+                            message.chat.id,
+                            f"<b>{local_msg}</b>",
+                            parse_mode="HTML"
+                        )
+                        return
+            else:
+                bot.reply_to(message, "❌ এই কমান্ডটি শুধুমাত্র গ্রুপে ব্যবহারযোগ্য।")
                 return
 
-        # Case 3: অন্যথায় নিজের ইনফো
-        else:
-            if message.from_user.username:
-                identifier = f"@{message.from_user.username}"
+        # CHANNEL
+        elif target_type == "channel":
+            if len(args) > 1:
+                identifier = args[1].strip()
+                if not identifier.startswith("@") and not identifier.lstrip("-").isdigit():
+                    identifier = "@" + identifier
             else:
-                identifier = str(message.from_user.id)
+                bot.reply_to(message, "ℹ️ চ্যানেলের ইনফো পেতে অবশ্যই ইউজারনেম দিতে হবে। যেমন: /cnnl @channelusername")
+                return
+        else:
+            bot.reply_to(message, "❌ অনুপযুক্ত অনুরোধ।")
+            return
 
+        # API Request
         try:
             api_url = f"https://tele-user-info-api-production.up.railway.app/get_user_info?username={identifier}"
             response = requests.get(api_url, timeout=15)
@@ -47,7 +80,6 @@ def register(bot):
                 bot.reply_to(message, "❌ API থেকে কোনো তথ্য পাওয়া যায়নি।")
                 return
 
-            # API রেসপন্স থেকে প্রোফাইল পিকচার URL আলাদা করা
             lines = response.text.strip().splitlines()
             profile_pic_url = None
             msg_lines = []
@@ -55,12 +87,16 @@ def register(bot):
             for line in lines:
                 if line.lower().startswith("↯ profile picture url:"):
                     profile_pic_url = line.split(":", 1)[1].strip()
-                    continue
-                msg_lines.append(line)
+                else:
+                    msg_lines.append(line)
 
-            final_msg = "\n".join(msg_lines)
+            final_msg = "\n".join(msg_lines).strip()
 
-            # প্রোফাইল পিকচার থাকলে ডাউনলোড করে ছবি হিসেবে পাঠাও
+            if not final_msg:
+                bot.reply_to(message, "❌ তথ্য খালি।")
+                return
+
+            # ছবিসহ পাঠাও যদি প্রোফাইল পিকচার থাকে
             if profile_pic_url and profile_pic_url.startswith("http"):
                 try:
                     pic_response = requests.get(profile_pic_url, timeout=10)
@@ -69,15 +105,15 @@ def register(bot):
                     photo_file.name = "profile.jpg"
 
                     bot.send_photo(
-                        message.chat.id,
-                        InputFile(photo_file),
+                        chat_id=message.chat.id,
+                        photo=InputFile(photo_file),
                         caption=f"<b>{final_msg}</b>",
                         parse_mode="HTML"
                     )
                 except Exception:
                     bot.send_message(
                         message.chat.id,
-                        f"<b>{final_msg}</b>\n\n⚠️ প্রোফাইল পিকচার লোড করতে সমস্যা হয়েছে।",
+                        f"<b>{final_msg}</b>\n⚠️ প্রোফাইল পিকচার লোড করতে সমস্যা হয়েছে।",
                         parse_mode="HTML"
                     )
             else:
@@ -88,10 +124,27 @@ def register(bot):
                 )
 
         except requests.exceptions.Timeout:
-            bot.reply_to(message, "❌ Request timeout. আবার চেষ্টা করুন।")
+            bot.reply_to(message, "❌ অনুরোধের সময় শেষ। আবার চেষ্টা করুন।")
         except requests.exceptions.ConnectionError:
-            bot.reply_to(message, "❌ কানেকশন সমস্যা। ইন্টারনেট চেক করুন।")
+            bot.reply_to(message, "❌ ইন্টারনেট সংযোগ সমস্যা।")
         except requests.exceptions.RequestException as e:
-            bot.reply_to(message, f"❌ নেটওয়ার্ক সমস্যা: {str(e)}")
+            bot.reply_to(message, f"❌ অনুরোধ ব্যর্থ: {str(e)}")
         except Exception as e:
             bot.reply_to(message, f"❌ অপ্রত্যাশিত সমস্যা: {str(e)}")
+
+    # হ্যান্ডলার রেজিস্ট্রেশন
+    @bot.message_handler(commands=["usr"])
+    def handle_usr(message: Message):
+        fetch_info(bot, message, target_type="user")
+
+    @bot.message_handler(commands=["bot"])
+    def handle_bot(message: Message):
+        fetch_info(bot, message, target_type="bot")
+
+    @bot.message_handler(commands=["grp"])
+    def handle_grp(message: Message):
+        fetch_info(bot, message, target_type="group")
+
+    @bot.message_handler(commands=["cnnl"])
+    def handle_cnnl(message: Message):
+        fetch_info(bot, message, target_type="channel")

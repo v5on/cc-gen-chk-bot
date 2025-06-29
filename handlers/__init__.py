@@ -12,5 +12,5 @@ from handlers.gpt_handler import register as gpt_register
 from handlers.converter_handler import register as converter_register
 from handlers.bgremove_handler import register as bgremove_register
 from handlers.fkAddress_handler import register as fkAddress_register
-from handlers.antispam_handler import register as antispam_register
 from handlers.start_handler import register as start_register
+from handlers.userinfo_handler import register as info_register

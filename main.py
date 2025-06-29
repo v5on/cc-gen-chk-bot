@@ -21,10 +21,10 @@ from handlers import (
     gpt_handler,
     converter_handler,
     fkAddress_handler,
-    antispam_handler
+    userinfo_handler
 )
 
-BOT_TOKEN = "7802952864:AAHgMC_FQgvZfMsjiboaOlOtkoYDcfWdzto"
+BOT_TOKEN = ""
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 
 # Flask for web hosting
@@ -71,7 +71,7 @@ register_handler(converter_handler, "Converter")
 register_handler(bgremove_handler, "BG Remove")
 register_handler(gpt_handler, "GPT")
 register_handler(fkAddress_handler, "Fake Address")
-register_handler(antispam_handler, "AntiSpam")
+register_handler(userinfo_handler, "User Info")
 
 print("-" * 40)
 print("✨ Handler registration completed!\n")

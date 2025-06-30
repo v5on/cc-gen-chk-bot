@@ -34,7 +34,6 @@ def register(bot):
                     if message.chat.username:
                         identifier = f"@{message.chat.username}"
                     else:
-                        # 🔁 Local fallback (no username)
                         local_msg = f"""✘《 Group Information ↯ 》
 ↯ Title: {message.chat.title}
 ↯ Chat ID: {message.chat.id}
@@ -96,7 +95,6 @@ def register(bot):
                 bot.reply_to(message, "❌ তথ্য খালি।")
                 return
 
-            # ছবিসহ পাঠাও যদি প্রোফাইল পিকচার থাকে
             if profile_pic_url and profile_pic_url.startswith("http"):
                 try:
                     pic_response = requests.get(profile_pic_url, timeout=10)
@@ -132,7 +130,7 @@ def register(bot):
         except Exception as e:
             bot.reply_to(message, f"❌ অপ্রত্যাশিত সমস্যা: {str(e)}")
 
-    # হ্যান্ডলার রেজিস্ট্রেশন
+    # ✅ কমান্ড হ্যান্ডলার রেজিস্ট্রেশন
     @bot.message_handler(commands=["usr"])
     def handle_usr(message: Message):
         fetch_info(bot, message, target_type="user")
@@ -148,3 +146,22 @@ def register(bot):
     @bot.message_handler(commands=["cnnl"])
     def handle_cnnl(message: Message):
         fetch_info(bot, message, target_type="channel")
+
+    @bot.message_handler(commands=["info"])
+    def handle_info(message: Message):
+        args = message.text.split(maxsplit=1)
+        if len(args) > 1:
+            username = args[1].strip()
+            if username.startswith("@"):
+                if username.lower().startswith("@bot") or username.lower().endswith("bot"):
+                    fetch_info(bot, message, target_type="bot")
+                elif username.lower().startswith("@c") or "channel" in username.lower():
+                    fetch_info(bot, message, target_type="channel")
+                elif username.lower().startswith("@g") or "group" in username.lower():
+                    fetch_info(bot, message, target_type="group")
+                else:
+                    fetch_info(bot, message, target_type="user")
+            else:
+                fetch_info(bot, message, target_type="user")
+        else:
+            fetch_info(bot, message, target_type="user")

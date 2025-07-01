@@ -14,3 +14,4 @@ from handlers.bgremove_handler import register as bgremove_register
 from handlers.fkAddress_handler import register as fkAddress_register
 from handlers.start_handler import register as start_register
 from handlers.userinfo_handler import register as info_register
+from handlers.yt_handler import register as yt_register

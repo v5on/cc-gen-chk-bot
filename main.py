@@ -21,7 +21,8 @@ from handlers import (
     gpt_handler,
     converter_handler,
     fkAddress_handler,
-    userinfo_handler
+    userinfo_handler,
+    yt_handler
 )
 
 BOT_TOKEN = ""
@@ -72,6 +73,7 @@ register_handler(bgremove_handler, "BG Remove")
 register_handler(gpt_handler, "GPT")
 register_handler(fkAddress_handler, "Fake Address")
 register_handler(userinfo_handler, "User Info")
+register_handler(yt_handler, "yt")
 
 print("-" * 40)
 print("✨ Handler registration completed!\n")
